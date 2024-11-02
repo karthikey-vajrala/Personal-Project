@@ -1,0 +1,113 @@
+import json
+from tabulate import tabulate
+
+# Load data from JSON file
+def load_data():
+    try:
+        with open('budget_data.json', 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return {'salary': None, 'entries': []}
+    except json.JSONDecodeError:
+        print("Error decoding JSON. The file may be corrupted.")
+        return {'salary': None, 'entries': []}
+
+# Save data to JSON file
+def save_data(data):
+    with open('budget_data.json', 'w') as file:
+        json.dump(data, file)
+
+# Reset budget data to an empty list
+def reset_budget():
+    empty_data = {'salary': None, 'entries': []}
+    save_data(empty_data)
+    print("Budget data has been reset.")
+
+# Set or update salary
+def set_salary(salary):
+    try:
+        salary = float(salary)
+        data = load_data()
+        data['salary'] = salary  # Set salary in the data dictionary
+        save_data(data)
+        print(f"Salary set to: ${salary:.2f}")
+    except ValueError:
+        print("Invalid salary. Please enter a numeric value.")
+
+# Add a new entry to the budget
+def add_entry(category, amount):
+    try:
+        amount = float(amount)
+    except ValueError:
+        print("Invalid amount. Please enter a numeric value.")
+        return
+    
+    data = load_data()
+    data['entries'].append({'category': category, 'amount': amount})  # Append to entries
+    save_data(data)
+    print(f"Added entry: Category={category}, Amount=${amount:.2f}")
+
+# Function to display the budget summary
+def display_summary():
+    data = load_data()
+    if not data['entries'] and data['salary'] is None:
+        print("\nNo data available.")
+        return
+    
+    categories = set(entry['category'] for entry in data['entries'])
+    amounts = {category: 0 for category in categories}
+    salary = data['salary']
+
+    # Calculate total amounts for each category
+    for entry in data['entries']:
+        amounts[entry['category']] += entry['amount']
+
+    # Prepare table data
+    table_data = []
+    total_spent = 0
+    for category, total in amounts.items():
+        total_spent += total  # Keep a running total of spent amounts
+        if salary is not None and salary > 0:  # Avoid division by zero
+            percentage_spent = (total / salary) * 100
+        else:
+            percentage_spent = 0
+        
+        table_data.append([category, total, percentage_spent])
+
+    # Display the table using tabulate
+    print("\n" + "=" * 60)
+    headers = ["Category", "Amount Spent", "Percentage of Salary"]
+    print(tabulate(table_data, headers, tablefmt="grid"))
+    
+    if total_spent > 0 and salary is not None:  # Calculate overall percentage spent
+        overall_percentage_spent = (total_spent / salary) * 100
+        print("=" * 60)
+        print(f"{'Total Spent:':<30} | ${total_spent:>14,.2f} | ({overall_percentage_spent:.2f}%)")
+    print("=" * 60)
+
+# Main program function
+def main():
+    while True:
+        print("\nOptions:")
+        print("1. Set Salary")
+        print("2. Add Entry")
+        print("3. Display Summary")
+        print("4. Reset Budget")
+        print("5. Exit")
+        choice = input("Choose an option (1-5): ")
+        
+        if choice == '1':
+            salary_input = input("Enter your salary: ")
+            set_salary(salary_input)
+        elif choice == '2':
+            category_input = input("Enter category: ")
+            amount_input = input("Enter amount: ")
+            add_entry(category_input, amount_input)
+        elif choice == '3':
+            display_summary()  # Display summary in the same cell
+        elif choice == '4':
+            reset_budget()
+        elif choice == '5':
+            break
+        else:
+            print("Invalid option. Please choose again."
