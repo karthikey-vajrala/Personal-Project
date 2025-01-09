@@ -1,92 +1,100 @@
 import json
 from tabulate import tabulate
+import matplotlib.pyplot as plt
 
-# Load data from JSON file
+# File handling
+DATA_FILE = 'budget_data.json'
+
 def load_data():
     try:
-        with open('budget_data.json', 'r') as file:
+        with open(DATA_FILE, 'r') as file:
             return json.load(file)
-    except FileNotFoundError:
-        return {'salary': None, 'entries': []}
-    except json.JSONDecodeError:
-        print("Error decoding JSON. The file may be corrupted.")
+    except (FileNotFoundError, json.JSONDecodeError):
         return {'salary': None, 'entries': []}
 
-# Save data to JSON file
 def save_data(data):
-    with open('budget_data.json', 'w') as file:
+    with open(DATA_FILE, 'w') as file:
         json.dump(data, file)
 
-# Reset budget data to an empty list
+# Core functionalities
 def reset_budget():
-    empty_data = {'salary': None, 'entries': []}
-    save_data(empty_data)
+    save_data({'salary': None, 'entries': []})
     print("Budget data has been reset.")
 
-# Set or update salary
 def set_salary(salary):
     try:
         salary = float(salary)
         data = load_data()
-        data['salary'] = salary  # Set salary in the data dictionary
+        data['salary'] = salary
         save_data(data)
         print(f"Salary set to: ${salary:.2f}")
     except ValueError:
         print("Invalid salary. Please enter a numeric value.")
 
-# Add a new entry to the budget
 def add_entry(category, amount):
     try:
         amount = float(amount)
+        data = load_data()
+        data['entries'].append({'category': category, 'amount': amount})
+        save_data(data)
+        print(f"Added entry: Category={category}, Amount=${amount:.2f}")
     except ValueError:
         print("Invalid amount. Please enter a numeric value.")
-        return
-    
-    data = load_data()
-    data['entries'].append({'category': category, 'amount': amount})  # Append to entries
-    save_data(data)
-    print(f"Added entry: Category={category}, Amount=${amount:.2f}")
 
-# Function to display the budget summary
 def display_summary():
     data = load_data()
-    if not data['entries'] and data['salary'] is None:
+    salary, entries = data.get('salary'), data.get('entries')
+
+    if not entries and salary is None:
         print("\nNo data available.")
         return
+
+    # Calculate totals per category and overall spending
+    category_totals = {}
+    for entry in entries:
+        category_totals[entry['category']] = category_totals.get(entry['category'], 0) + entry['amount']
     
-    categories = set(entry['category'] for entry in data['entries'])
-    amounts = {category: 0 for category in categories}
-    salary = data['salary']
+    total_spent = sum(category_totals.values())
+    table_data = [
+        [category, amount, (amount / salary) * 100 if salary else 0]
+        for category, amount in category_totals.items()
+    ]
 
-    # Calculate total amounts for each category
-    for entry in data['entries']:
-        amounts[entry['category']] += entry['amount']
-
-    # Prepare table data
-    table_data = []
-    total_spent = 0
-    for category, total in amounts.items():
-        total_spent += total  # Keep a running total of spent amounts
-        if salary is not None and salary > 0:  # Avoid division by zero
-            percentage_spent = (total / salary) * 100
-        else:
-            percentage_spent = 0
-        
-        table_data.append([category, total, percentage_spent])
-
-    # Display the table using tabulate
+    # Display the table
     print("\n" + "=" * 60)
-    headers = ["Category", "Amount Spent", "Percentage of Salary"]
-    print(tabulate(table_data, headers, tablefmt="grid"))
-    
-    if total_spent > 0 and salary is not None:  # Calculate overall percentage spent
-        overall_percentage_spent = (total_spent / salary) * 100
+    print(tabulate(table_data, headers=["Category", "Amount Spent", "Percentage of Salary"], tablefmt="grid"))
+    if salary:
         print("=" * 60)
-        print(f"{'Total Spent:':<30} | ${total_spent:>14,.2f} | ({overall_percentage_spent:.2f}%)")
+        print(f"{'Total Spent:':<30} | ${total_spent:>14,.2f} | ({(total_spent / salary) * 100:.2f}%)")
     print("=" * 60)
 
-# Main program function
+    # Visualizations
+    if category_totals:
+        plt.figure(figsize=(10, 6))
+        plt.bar(category_totals.keys(), category_totals.values(), color='skyblue', edgecolor='black')
+        plt.title('Spending by Category')
+        plt.xlabel('Category')
+        plt.ylabel('Amount Spent ($)')
+        plt.xticks(rotation=45, ha='right')
+        plt.tight_layout()
+        plt.show()
+    
+    if salary:
+        plt.figure(figsize=(6, 6))
+        plt.pie([total_spent, max(salary - total_spent, 0)], labels=['Spent', 'Remaining'], 
+                colors=['tomato', 'lightgreen'], autopct='%1.1f%%', startangle=140)
+        plt.title('Salary Usage')
+        plt.show()
+
+# Menu-driven interface
 def main():
+    actions = {
+        '1': lambda: set_salary(input("Enter your salary: ")),
+        '2': lambda: add_entry(input("Enter category: "), input("Enter amount: ")),
+        '3': display_summary,
+        '4': reset_budget,
+    }
+
     while True:
         print("\nOptions:")
         print("1. Set Salary")
@@ -95,19 +103,12 @@ def main():
         print("4. Reset Budget")
         print("5. Exit")
         choice = input("Choose an option (1-5): ")
-        
-        if choice == '1':
-            salary_input = input("Enter your salary: ")
-            set_salary(salary_input)
-        elif choice == '2':
-            category_input = input("Enter category: ")
-            amount_input = input("Enter amount: ")
-            add_entry(category_input, amount_input)
-        elif choice == '3':
-            display_summary()  # Display summary in the same cell
-        elif choice == '4':
-            reset_budget()
-        elif choice == '5':
+
+        if choice == '5':
             break
+        action = actions.get(choice)
+        if action:
+            action()
         else:
-            print("Invalid option. Please choose again."
+            print("Invalid option. Please choose again.")
+
