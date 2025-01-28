@@ -27,7 +27,7 @@ def set_salary(salary):
         data = load_data()
         data['salary'] = salary
         save_data(data)
-        print(f"Salary set to: ${salary:.2f}")
+        print(f"Monthly Net Salary set to: ${salary:.2f}")
     except ValueError:
         print("Invalid salary. Please enter a numeric value.")
 
@@ -89,7 +89,7 @@ def display_summary():
 # Menu-driven interface
 def main():
     actions = {
-        '1': lambda: set_salary(input("Enter your salary: ")),
+        '1': lambda: set_salary(input("Enter your Monthly salary: ")),
         '2': lambda: add_entry(input("Enter category: "), input("Enter amount: ")),
         '3': display_summary,
         '4': reset_budget,
@@ -97,10 +97,10 @@ def main():
 
     while True:
         print("\nOptions:")
-        print("1. Set Salary")
-        print("2. Add Entry")
-        print("3. Display Summary")
-        print("4. Reset Budget")
+        print("1. Set Monthly Net Salary")
+        print("2. Add Entry Of Expense")
+        print("3. Display Summary & Overview")
+        print("4. Reset")
         print("5. Exit")
         choice = input("Choose an option (1-5): ")
 
@@ -111,4 +111,3 @@ def main():
             action()
         else:
             print("Invalid option. Please choose again.")
-
