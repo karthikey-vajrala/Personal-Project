@@ -111,3 +111,6 @@ def main():
             action()
         else:
             print("Invalid option. Please choose again.")
+
+input("Press Enter to exit...")
+
